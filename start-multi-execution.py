@@ -14,7 +14,7 @@ json_template = {
 
   "shape_function":"GIMP",
 
-  "time":1,
+  "time":4,
 
   "time_step":0.001,
 
@@ -125,11 +125,15 @@ def create_folders():
     Path(f"{RESULT_FOLDER}/{CONFIG_FOLDER}").mkdir(parents=True, exist_ok=True)
     Path(f"{RESULT_FOLDER}/{ARTIFACT_FOLDER}").mkdir(parents=True, exist_ok=True)
     Path(f"{RESULT_FOLDER}/{LOGS_FOLDER}").mkdir(parents=True, exist_ok=True)
+    
     print(f"--> Folders created in {RESULT_FOLDER}")
 
 def create_log_folder():
     for name in executables.keys():
-        Path(f"{RESULT_FOLDER}/{LOGS_FOLDER}/{name}").mkdir(parents=True, exist_ok=True)
+      for f in friction:
+          for c in cohesion:
+              Path(f"{RESULT_FOLDER}/{LOGS_FOLDER}/{name}/{config_file(f, c)}").mkdir(parents=True, exist_ok=True)
+
 
 def create_configuration_files():
     print(f"\n> Creating configuration files")
@@ -296,7 +300,8 @@ def read_configuration():
 def run_benchmark(executable_path, name, config_file):
     print(f"----> [{name}] Running config file: {config_file}.json with executable: {executable_path}")
     try:
-        log_reference = Path(f"{RESULT_FOLDER}/{LOGS_FOLDER}/{name}/{config_file}-{name}.log")
+        log_reference = Path(f"{RESULT_FOLDER}/{LOGS_FOLDER}/{name}/{config_file}/{config_file}-{name}.log")
+        log_folder = log_reference.parent
         config_path = Path(f"{RESULT_FOLDER}/{CONFIG_FOLDER}/{config_file}.json")
 
         exe_abs = os.path.abspath(executable_path)
@@ -309,7 +314,7 @@ def run_benchmark(executable_path, name, config_file):
                            stdout=log_file,
                            stderr=subprocess.STDOUT,
                            check=True,
-                           cwd=os.path.dirname(exe_abs))
+                           cwd=log_folder)
     except Exception as e:
         print(f"----> [ERROR] An error occurred while running the benchmark: {e}")
         print(f"----> [ERROR] Executable: {executable_path} | name: {name} | Config File: {config_file}")
