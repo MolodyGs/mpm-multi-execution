@@ -1,6 +1,6 @@
 {
 	"executables": {
-		"linux": "27774909400"
+		"win": "executables/MPM-Geomechanics.exe"
 	},
 	"parameters": {
 		"friction": [

@@ -10,79 +10,70 @@ import zipfile
 
 # Json template for testing (slope-failure)
 json_template = {
-"stress_scheme_update":"USL",
-	"shape_function":"GIMP",
-	"time":1,
-	"time_step":0.001,
-	"gravity":[0.0,0.0,-9.81],
-	"n_threads":10,
-	"damping":
-	{
-		"type":"local",
-		"value":0.0
-	},
-	"results":
-	{
-		"print":50,
-		"material-point-results":
-		{
-			"fields":["all"]
-		},
-		
-		"grid-nodal-results":
-		{
-			"fields":["none"]
-		}
-	},
-	"mesh":
-	{	
-		"cells_dimension":[1,1,1],
-		"cells_number":[110,1,36],
-		"origin":[0,0,0],
-		"boundary_conditions":
-		{
-			"plane_X0":"fixed",
-			"plane_Y0":"sliding",
-			"plane_Z0":"fixed",
-			"plane_Xn":"fixed",
-			"plane_Yn":"sliding",
-			"plane_Zn":"fixed"
-		}
-	},
-	"material":
-	{
-		"plastic":
-		{
-			"type":"mohr-coulomb",
-			"id":1,
-			"young":70e6,
-			"density":2100,
-			"poisson":0.3,
-			"friction":20.0,
-			"cohesion":1.0e3
-		}
-	},
-	"body":
-	{
-		"soil":
-		{
-			"type":"polygon_2d",
-			"extrude_direction":"y",
-			"extrude_displacement":1,
-			"discretization_length":1,
-			"id":1,
-			"points":
-			[
-				[  0, 0, 0 ],
-				[110, 0, 0 ],
-				[110, 0, 15],
-				[ 50, 0, 15],
-				[ 30, 0, 35],
-				[  0, 0, 35]
-			],
-			"material_id":1
-		}
-	}
+  "stress_scheme_update":"USL",
+
+  "shape_function":"GIMP",
+
+  "time":1,
+
+  "time_step":0.001,
+
+  "gravity":[0.0,0.0,-9.81],
+
+  "n_threads":10,
+
+  "results":
+  {
+    "print":20,
+    "material_point_results":["none"],
+    "grid_nodal_results":["none"]
+  },
+
+  "n_phases":1,
+
+  "mesh":
+  { 
+    "cells_dimension":[1,1,1],
+    "cells_number":[20, 20, 50],
+    "origin":[0,0,0],
+    
+    "boundary_conditions":
+    {
+      "plane_X0":"fixed",
+      "plane_Y0":"sliding",
+      "plane_Z0":"fixed",
+      "plane_Xn":"fixed",
+      "plane_Yn":"sliding",
+      "plane_Zn":"fixed"
+    }
+  },
+
+  "material":
+  {
+    "mohr-coulomb":
+    {
+      "type": "mohr-coulomb",
+      "density": 1000,
+      "young": 100e4,
+      "poisson": 0.25,
+      "cohesion": 6e6,
+      "friction": 30,
+      "tensile": 3e6,
+      "id": 1
+    }
+  },
+
+  "body":
+  {
+    "body_cuboid_1":
+    {
+      "type":"cuboid",
+      "id":1,
+      "point_p1":[8,8,40],
+      "point_p2":[12,12,44],
+      "material_id":1
+    }
+  }
 }
 
 # Executable file names
@@ -140,42 +131,12 @@ def create_log_folder():
     for name in executables.keys():
         Path(f"{RESULT_FOLDER}/{LOGS_FOLDER}/{name}").mkdir(parents=True, exist_ok=True)
 
-# Run a benchmark with a specific executable and configuration file
-def run_benchmark(executable_path, name, config_file):
-    print(f"----> [{name}] Running config file: {config_file}.json with executable: {executable_path}")
-    try:
-        log_reference = Path(f"{RESULT_FOLDER}/{LOGS_FOLDER}/{name}/{config_file}-{name}.log")
-        config_path = Path(f"{RESULT_FOLDER}/{CONFIG_FOLDER}/{config_file}.json")
-
-        exe_abs = os.path.abspath(executable_path)
-        cfg_abs = os.path.abspath(config_path)
-
-        Path(log_reference.parent).mkdir(parents=True, exist_ok=True)
-
-        with open(log_reference, "w") as log_file:
-            subprocess.run([exe_abs, str(cfg_abs)],
-                           stdout=log_file,
-                           stderr=subprocess.STDOUT,
-                           check=True,
-                           cwd=os.path.dirname(exe_abs))
-    except Exception as e:
-        print(f"----> [ERROR] An error occurred while running the benchmark: {e}")
-        print(f"----> [ERROR] Executable: {executable_path} | name: {name} | Config File: {config_file}")
-
-# Run all the benchmarks of a specific executable
-def execute_benchmarks(executable_path, name):
-  print(f"--> Starting executions: [{name}] ")
-  for f in friction:
-    for c in cohesion:
-      run_benchmark(executable_path, name, config_file(f, c))
-  print(f"--> Completed executions: [{name}]\n")
-
 def create_configuration_files():
     print(f"\n> Creating configuration files")
     for f in friction:
         for c in cohesion:
-            json_template["material"]["plastic"]["friction"] = f
-            json_template["material"]["plastic"]["cohesion"] = c
+            json_template["material"]["mohr-coulomb"]["friction"] = f
+            json_template["material"]["mohr-coulomb"]["cohesion"] = c
             with open(f"{RESULT_FOLDER}/{CONFIG_FOLDER}/{config_file(f, c)}.json", "w") as file:
                 json.dump(json_template, file, indent=4)
     print(f"--> Configuration files created in {RESULT_FOLDER}/{CONFIG_FOLDER}")
@@ -249,11 +210,11 @@ def read_configuration():
         artifact_name = ""
         extension = ""
         repository = "fabricix/MPM-Geomechanics"
-        if sys.platform == "win32":
+        if sys.platform == "win32" or sys.platform == "cygwin":
             artifact_name = "MPM-Geomechanics-windows"
             extension = ".exe"
 
-        if sys.platform == "linux" or sys.platform == "cygwin":
+        if sys.platform == "linux":
             artifact_name = "MPM-Geomechanics-linux"
 
         if artifact_name == "":
@@ -296,7 +257,8 @@ def read_configuration():
                     print(f"----> [ERROR] Please check if the run ID [{path}] exists in GitHub Actions")
                     print(f"----> [ERROR] {e}")
                     raise
-                
+            else:
+                executables[name] = path
                     
     if "parameters" in json_configuration:
         print("\n--> Custom parameters found in configuration file")
@@ -330,6 +292,43 @@ def read_configuration():
         json.dump(cache, f, indent=4)
         print(f"----> Cached configuration saved to {RESULT_FOLDER}/{CACHE_FILE_NAME}")
 
+# Run a benchmark with a specific executable and configuration file
+def run_benchmark(executable_path, name, config_file):
+    print(f"----> [{name}] Running config file: {config_file}.json with executable: {executable_path}")
+    try:
+        log_reference = Path(f"{RESULT_FOLDER}/{LOGS_FOLDER}/{name}/{config_file}-{name}.log")
+        config_path = Path(f"{RESULT_FOLDER}/{CONFIG_FOLDER}/{config_file}.json")
+
+        exe_abs = os.path.abspath(executable_path)
+        cfg_abs = os.path.abspath(config_path)
+
+        Path(log_reference.parent).mkdir(parents=True, exist_ok=True)
+
+        with open(log_reference, "w") as log_file:
+            subprocess.run([exe_abs, str(cfg_abs)],
+                           stdout=log_file,
+                           stderr=subprocess.STDOUT,
+                           check=True,
+                           cwd=os.path.dirname(exe_abs))
+    except Exception as e:
+        print(f"----> [ERROR] An error occurred while running the benchmark: {e}")
+        print(f"----> [ERROR] Executable: {executable_path} | name: {name} | Config File: {config_file}")
+
+# Run all the benchmarks of a specific executable
+def execute_benchmarks(executable_path, name):
+  print(f"--> Starting executions: [{name}] ")
+  for f in friction:
+    for c in cohesion:
+      run_benchmark(executable_path, name, config_file(f, c))
+  print(f"--> Completed executions: [{name}]\n")
+
+# # Run all the benchmarks of a specific executable
+# def execute_benchmarks(f, c):
+#   for name, executable_path in executables.items():
+#     print(f"--> Starting executions: [{name}] ") 
+#     run_benchmark(executable_path, name, config_file(f, c))
+#     print(f"--> Completed executions: [{name}]\n")
+
 def start_benchmarks():
     print("\n> Starting benchmarks")
 
@@ -342,6 +341,12 @@ def start_benchmarks():
       thread = threading.Thread(target=execute_benchmarks, args=(executable_path, name))
       thread.start()
       threads.append(thread)
+
+    # for f in friction:
+    #     for c in cohesion:
+    #           thread = threading.Thread(target=execute_benchmarks, args=(f, c))
+    #           thread.start()
+    #           threads.append(thread)
 
     for thread in threads:
       thread.join()

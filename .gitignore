@@ -1,1 +1,5 @@
 results
+executables/particles
+executables/grid
+executables/time-energy.csv
+executables/centroid_points_stl_contact
